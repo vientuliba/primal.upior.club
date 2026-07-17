@@ -57,6 +57,8 @@ label { display: grid; gap: 5px; color: var(--ink-soft); font-size: 12px; text-t
 .join-button { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 3px; }
 .fine-print { margin: 18px 0 0; padding-top: 12px; color: rgba(48, 44, 53, 0.72); border-top: 1px dotted var(--line); font-size: 11px; }
 .inline-error { display: flex; align-items: center; gap: 7px; padding: 8px 9px; color: var(--error); border: 1px solid var(--error); background: #f3e4df; font-size: 12px; }
+.home-return { position: fixed; z-index: 30; left: 6px; bottom: 4px; padding: 2px; color: var(--ink-soft); font-size: 8px; line-height: 1; text-decoration: none; opacity: 0.42; }
+.home-return:hover, .home-return:focus-visible { color: var(--violet); opacity: 1; }
 
 /* room document */
 .app-shell { width: min(100%, 1260px); min-height: 100vh; margin: 0 auto; padding: 18px 22px 26px; }

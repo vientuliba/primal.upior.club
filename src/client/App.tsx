@@ -16,6 +16,7 @@ const blankSnapshot: RoomSnapshot = {
 
 export function App() {
   const [joined, setJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [roomActive, setRoomActive] = useState<boolean | null>(null);
   const [displayName, setDisplayName] = useState(() => localStorage.getItem("primal:name") ?? "");
   const [pin, setPin] = useState(() => {
@@ -57,6 +58,7 @@ export function App() {
 
   const connect = (event: React.FormEvent) => {
     event.preventDefault();
+    if (joining) return;
     const cleanName = displayName.trim();
     if (!cleanName) { setError("Enter a display name."); return; }
     if (roomActive === null) { setError("Still checking the room. Try again in a moment."); return; }
@@ -64,11 +66,10 @@ export function App() {
     const roomPin = creating ? generatePin() : pin;
     if (!/^\d{6}$/.test(roomPin)) { setError("Enter the six-digit room PIN."); return; }
     localStorage.setItem("primal:name", cleanName);
-    localStorage.setItem("primal:pin", roomPin);
     if (creating) void navigator.clipboard.writeText(roomPin).catch(() => undefined);
     setDisplayName(cleanName);
     setPin(roomPin);
-    setJoined(true);
+    setJoining(true);
     setConnection("connecting");
     setError(null);
     let connectedOnce = false;
@@ -77,6 +78,9 @@ export function App() {
     socket.on("connect", () => {
       connectedOnce = true;
       socket.auth = { displayName: cleanName, pin: roomPin, createRoom: false };
+      localStorage.setItem("primal:pin", roomPin);
+      setJoining(false);
+      setJoined(true);
       setRoomActive(true);
       setConnection("connected");
       void calibrateClock(socket, setClockOffset);
@@ -84,6 +88,7 @@ export function App() {
     socket.io.on("reconnect_attempt", () => setConnection("reconnecting"));
     socket.on("disconnect", () => setConnection("reconnecting"));
     socket.on("connect_error", (cause) => {
+      setJoining(false);
       setConnection("offline");
       setError(cause.message);
       if (!connectedOnce) {
@@ -110,6 +115,7 @@ export function App() {
   const leave = () => {
     socketRef.current?.disconnect();
     socketRef.current = null;
+    setJoining(false);
     setJoined(false);
     setConnection("offline");
     setListeners([]);
@@ -144,16 +150,26 @@ export function App() {
     localStorage.setItem("primal:volume-slider", String(next));
   };
 
-  if (!joined) return <JoinScreen displayName={displayName} pin={pin} roomActive={roomActive} error={error} setDisplayName={setDisplayName} setPin={setPin} onJoin={connect} />;
+  if (!joined) return <>
+    <JoinScreen displayName={displayName} pin={pin} roomActive={roomActive} joining={joining} error={error} setDisplayName={setDisplayName} setPin={setPin} onJoin={connect} />
+    <HomeReturn />
+  </>;
 
-  return <Room
-    snapshot={snapshot} listeners={listeners} session={session} connection={connection} error={error} trackUrl={trackUrl} adding={adding}
-    volume={volume} clockOffset={clockOffset} iframeKey={joined ? "joined" : "left"}
-    setTrackUrl={setTrackUrl} setError={setError} onAdd={addTrack} onLeave={leave} onVolume={changeVolume} command={command}
-  />;
+  return <>
+    <Room
+      snapshot={snapshot} listeners={listeners} session={session} connection={connection} error={error} trackUrl={trackUrl} adding={adding}
+      volume={volume} clockOffset={clockOffset} iframeKey={joined ? "joined" : "left"}
+      setTrackUrl={setTrackUrl} setError={setError} onAdd={addTrack} onLeave={leave} onVolume={changeVolume} command={command}
+    />
+    <HomeReturn />
+  </>;
 }
 
-function JoinScreen(props: { displayName: string; pin: string; roomActive: boolean | null; error: string | null; setDisplayName: (value: string) => void; setPin: (value: string) => void; onJoin: (event: React.FormEvent) => void }) {
+function HomeReturn() {
+  return <a className="home-return" href="https://upior.club" aria-label="Return to upior.club">← upior.club</a>;
+}
+
+function JoinScreen(props: { displayName: string; pin: string; roomActive: boolean | null; joining: boolean; error: string | null; setDisplayName: (value: string) => void; setPin: (value: string) => void; onJoin: (event: React.FormEvent) => void }) {
   return <main className="join-shell">
     <div className="join-glow" />
     <section className="join-card">
@@ -169,7 +185,10 @@ function JoinScreen(props: { displayName: string; pin: string; roomActive: boole
         <label>DISPLAY NAME<input autoFocus maxLength={32} autoComplete="nickname" value={props.displayName} onChange={(event) => props.setDisplayName(event.target.value)} placeholder="What should friends call you?" /></label>
         {props.roomActive && <label>ROOM PIN<input maxLength={6} inputMode="numeric" autoComplete="one-time-code" value={props.pin} onChange={(event) => props.setPin(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6 digits" type="password" /></label>}
         {props.error && <div className="inline-error"><AlertCircle size={16} />{props.error}</div>}
-        <button className="primary join-button" type="submit" disabled={props.roomActive === null}><Headphones size={19} /> {props.roomActive === false ? "Create room & copy PIN" : "Enter the room"}</button>
+        <button className="primary join-button" type="submit" disabled={props.roomActive === null || props.joining}>
+          {props.joining ? <LoaderCircle className="spin" size={19} /> : <Headphones size={19} />}
+          {props.joining ? "Checking PIN…" : props.roomActive === false ? "Create room & copy PIN" : "Enter the room"}
+        </button>
       </form>
       <p className="fine-print">{props.roomActive === false ? "A six-digit PIN will be generated, copied, and shown inside the room." : "Your name, PIN, and volume stay in this browser."}</p>
     </section>

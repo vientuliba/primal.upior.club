@@ -1,0 +1,67 @@
+// @vitest-environment jsdom
+
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { App } from "./App";
+
+const socketMock = vi.hoisted(() => {
+  const handlers = new Map<string, (value?: unknown) => void>();
+  const socket = {
+    auth: {},
+    connected: false,
+    disconnect: vi.fn(),
+    emit: vi.fn(),
+    on: vi.fn((event: string, handler: (value?: unknown) => void) => {
+      handlers.set(event, handler);
+      return socket;
+    }),
+    io: { on: vi.fn() },
+  };
+  return { handlers, socket, io: vi.fn(() => socket) };
+});
+
+vi.mock("socket.io-client", () => ({ io: socketMock.io }));
+
+describe("room authentication screen", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    localStorage.clear();
+    localStorage.setItem("primal:name", "Visitor");
+    localStorage.setItem("primal:pin", "000000");
+    socketMock.handlers.clear();
+    socketMock.io.mockClear();
+    socketMock.socket.disconnect.mockClear();
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ active: true }) })));
+    container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => { root.render(<App />); });
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+  });
+
+  it("never renders the room while an incorrect PIN is being rejected", async () => {
+    const form = container.querySelector("form");
+    expect(form).not.toBeNull();
+
+    await act(async () => { form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+
+    expect(container.querySelector(".app-shell")).toBeNull();
+    expect(container.querySelector(".join-shell")).not.toBeNull();
+    expect(container.textContent).toContain("Checking PIN…");
+
+    await act(async () => { socketMock.handlers.get("connect_error")?.(new Error("That six-digit PIN is incorrect.")); });
+
+    expect(container.querySelector(".app-shell")).toBeNull();
+    expect(container.querySelector(".join-shell")).not.toBeNull();
+    expect(container.textContent).toContain("That six-digit PIN is incorrect.");
+  });
+});
