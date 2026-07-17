@@ -1,0 +1,15 @@
+[Unit]
+Description=Back up the Primal SQLite database
+ConditionPathExists=/var/lib/primal/primal.db
+
+[Service]
+Type=oneshot
+User=primal
+Group=primal
+ExecStart=/opt/primal/current/deploy/backup.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/primal
+
