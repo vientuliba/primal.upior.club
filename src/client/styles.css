@@ -23,7 +23,7 @@
 
 * { box-sizing: border-box; }
 html { min-height: 100%; background: var(--paper); }
-body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--ink); background: var(--paper); font: 400 15px/1.45 "Share Tech Mono", ui-monospace, "SFMono-Regular", Consolas, monospace; }
+body { min-width: 320px; min-height: 100vh; margin: 0; color: var(--ink); background: var(--paper); font: 400 15px/1.45 "Share Tech Mono", ui-monospace, "SFMono-Regular", Consolas, monospace; font-variant-ligatures: none; font-feature-settings: "liga" 0; }
 button, input { font: inherit; }
 button { color: var(--ink); }
 a { color: var(--violet); text-decoration: underline; text-underline-offset: 3px; }
