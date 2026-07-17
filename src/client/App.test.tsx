@@ -64,4 +64,37 @@ describe("room authentication screen", () => {
     expect(container.querySelector(".join-shell")).not.toBeNull();
     expect(container.textContent).toContain("That six-digit PIN is incorrect.");
   });
+
+  it("renders PIN and listeners together only after the complete room state arrives", async () => {
+    const form = container.querySelector("form");
+    await act(async () => { form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+
+    await act(async () => { socketMock.handlers.get("connect")?.(); });
+
+    expect(container.querySelector(".app-shell")).toBeNull();
+    expect(container.querySelector(".join-shell")).not.toBeNull();
+    expect(container.textContent).toContain("Checking PIN…");
+
+    await act(async () => {
+      socketMock.handlers.get("room:ready")?.({
+        snapshot: {
+          queue: [],
+          playback: { currentItemId: null, playing: false, anchorPosition: 0, anchorTimestamp: 0 },
+          revision: 0,
+          serverTimestamp: Date.now(),
+        },
+        listeners: [
+          { id: "host", displayName: "Host", isHost: true },
+          { id: "visitor", displayName: "Visitor", isHost: false },
+        ],
+        session: { isHost: true, pin: "123456" },
+      });
+    });
+
+    expect(container.querySelector(".join-shell")).toBeNull();
+    expect(container.querySelector(".app-shell")).not.toBeNull();
+    expect(container.querySelector(".host-pin")?.textContent).toContain("123456");
+    expect(container.querySelector(".listener-list")?.textContent).toContain("Host");
+    expect(container.querySelector(".listener-list")?.textContent).toContain("Visitor");
+  });
 });

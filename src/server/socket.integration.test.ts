@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { io, type Socket } from "socket.io-client";
-import type { ClientToServerEvents, RoomSnapshot, ServerToClientEvents } from "../shared/protocol";
+import type { ClientToServerEvents, InitialRoomState, RoomSnapshot, ServerToClientEvents } from "../shared/protocol";
 
 type TestSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 const pin = "123456";
@@ -98,12 +98,10 @@ function connectClient(displayName: string, suppliedPin = pin, createRoom = fals
   return new Promise((resolveSocket, reject) => {
     const socket: TestSocket = io(`http://127.0.0.1:${port}`, { auth: { displayName, pin: suppliedPin, createRoom }, reconnection: false });
     let connected = false;
-    let snapshot: RoomSnapshot | undefined;
-    let session: { isHost: boolean; pin: string | null } | undefined;
-    const complete = () => { if (connected && snapshot && session) resolveSocket({ socket, snapshot, session }); };
+    let ready: InitialRoomState | undefined;
+    const complete = () => { if (connected && ready) resolveSocket({ socket, snapshot: ready.snapshot, session: ready.session }); };
     socket.once("connect", () => { connected = true; complete(); });
-    socket.once("room:snapshot", (room) => { snapshot = room; complete(); });
-    socket.once("session:update", (info) => { session = info; complete(); });
+    socket.once("room:ready", (state) => { ready = state; complete(); });
     socket.once("connect_error", reject);
   });
 }

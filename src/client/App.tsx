@@ -83,8 +83,6 @@ export function App() {
       connectedOnce = true;
       socket.auth = { displayName: cleanName, pin: roomPin, createRoom: false };
       localStorage.setItem("primal:pin", roomPin);
-      setJoining(false);
-      setJoined(true);
       setRoomActive(true);
       setConnection("connected");
       void calibrateClock(socket, setClockOffset);
@@ -102,17 +100,26 @@ export function App() {
         void refreshRoomStatus();
       }
     });
-    socket.on("room:snapshot", setSnapshot);
-    socket.on("playback:sync", (next) => setSnapshot((current) => next.revision >= current.revision ? next : current));
-    socket.on("presence:update", setListeners);
-    socket.on("session:update", (nextSession) => {
+    const applySession = (nextSession: SessionInfo) => {
       setSession(nextSession);
       if (nextSession.pin) {
         setPin(nextSession.pin);
         localStorage.setItem("primal:pin", nextSession.pin);
         socket.auth = { displayName: cleanName, pin: nextSession.pin, createRoom: false };
       }
+    };
+    socket.on("room:ready", (state) => {
+      setSnapshot(state.snapshot);
+      setListeners(state.listeners);
+      applySession(state.session);
+      setJoining(false);
+      setJoined(true);
+      setConnection("connected");
     });
+    socket.on("room:snapshot", setSnapshot);
+    socket.on("playback:sync", (next) => setSnapshot((current) => next.revision >= current.revision ? next : current));
+    socket.on("presence:update", setListeners);
+    socket.on("session:update", applySession);
     socket.on("room:error", (roomError) => setError(roomError.message));
   };
 

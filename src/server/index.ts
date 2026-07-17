@@ -71,7 +71,11 @@ io.on("connection", (socket) => {
   if (emptyRoomTimer) clearTimeout(emptyRoomTimer);
   if (socket.data.isHost) hostReservation = socket.id;
   listeners.set(socket.id, { id: socket.id, displayName: socket.data.displayName, isHost: socket.data.isHost });
-  socket.emit("room:snapshot", room.snapshot());
+  const snapshot = room.snapshot();
+  const session = { isHost: socket.data.isHost, pin: socket.data.isHost ? currentPin : null };
+  socket.emit("room:ready", { snapshot, listeners: [...listeners.values()], session });
+  // Keep the standalone snapshot for clients open during a rolling frontend update.
+  socket.emit("room:snapshot", snapshot);
   emitSessions();
 
   socket.on("sync:ping", (clientTimestamp, ack) => ack(Date.now(), clientTimestamp));

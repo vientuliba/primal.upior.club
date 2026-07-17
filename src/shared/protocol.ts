@@ -51,6 +51,7 @@ export interface RoomError {
 
 export interface PresenceEntry { id: string; displayName: string; isHost: boolean }
 export interface SessionInfo { isHost: boolean; pin: string | null }
+export interface InitialRoomState { snapshot: RoomSnapshot; listeners: PresenceEntry[]; session: SessionInfo }
 
 export interface ClientToServerEvents {
   "queue:add": (payload: CommandBase & { url: string }, ack: (result: CommandAck) => void) => void;
@@ -68,6 +69,7 @@ export interface ClientToServerEvents {
 }
 
 export interface ServerToClientEvents {
+  "room:ready": (state: InitialRoomState) => void;
   "room:snapshot": (snapshot: RoomSnapshot) => void;
   "presence:update": (listeners: PresenceEntry[]) => void;
   "session:update": (session: SessionInfo) => void;
