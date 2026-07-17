@@ -1,4 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap");
+@font-face {
+  font-family: "Share Tech Mono";
+  src: url("/share-tech-mono.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: optional;
+}
 
 :root {
   color-scheme: light;

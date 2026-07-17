@@ -39,6 +39,7 @@ afterAll(async () => {
 describe("Socket.IO room API", () => {
   it("reports an empty room and requires an explicit create request", async () => {
     expect(await roomStatus()).toEqual({ active: false });
+    expect(await initialPageRoomStatus()).toBe(false);
     const socket = io(`http://127.0.0.1:${port}`, { auth: { displayName: "Evan", pin }, reconnection: false });
     const message = await new Promise<string>((resolveMessage) => socket.on("connect_error", (error) => resolveMessage(error.message)));
     expect(message).toMatch(/room is empty/i);
@@ -70,6 +71,7 @@ describe("Socket.IO room API", () => {
     const host = await connectClient("Host", pin, true);
     expect(host.session).toEqual({ isHost: true, pin });
     expect(await roomStatus()).toEqual({ active: true });
+    expect(await initialPageRoomStatus()).toBe(true);
 
     const rejected = io(`http://127.0.0.1:${port}`, { auth: { displayName: "Wrong pin", pin: "000000" }, reconnection: false });
     const message = await new Promise<string>((resolveMessage) => rejected.on("connect_error", (error) => resolveMessage(error.message)));
@@ -109,6 +111,13 @@ function connectClient(displayName: string, suppliedPin = pin, createRoom = fals
 async function roomStatus(): Promise<{ active: boolean }> {
   const response = await fetch(`http://127.0.0.1:${port}/api/status`);
   return response.json() as Promise<{ active: boolean }>;
+}
+
+async function initialPageRoomStatus(): Promise<boolean> {
+  const html = await fetch(`http://127.0.0.1:${port}/`).then((response) => response.text());
+  const match = html.match(/window\.__PRIMAL_ROOM_ACTIVE__=(true|false)/);
+  if (!match) throw new Error("Initial room status was not embedded in the page");
+  return match[1] === "true";
 }
 
 async function waitForInactive(): Promise<void> {

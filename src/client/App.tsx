@@ -17,7 +17,7 @@ const blankSnapshot: RoomSnapshot = {
 export function App() {
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [roomActive, setRoomActive] = useState<boolean | null>(null);
+  const [roomActive, setRoomActive] = useState<boolean | null>(() => window.__PRIMAL_ROOM_ACTIVE__ ?? null);
   const [displayName, setDisplayName] = useState(() => localStorage.getItem("primal:name") ?? "");
   const [pin, setPin] = useState(() => {
     const saved = localStorage.getItem("primal:pin") ?? "";
@@ -33,6 +33,7 @@ export function App() {
   const [volume, setVolume] = useState(() => Number(localStorage.getItem("primal:volume-slider") ?? localStorage.getItem("primal:volume") ?? 55));
   const [clockOffset, setClockOffset] = useState(0);
   const socketRef = useRef<RoomSocket | null>(null);
+  const receivedInitialRoomStatus = useRef(roomActive !== null);
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
 
@@ -51,7 +52,10 @@ export function App() {
 
   useEffect(() => {
     if (joined) return;
-    void refreshRoomStatus();
+    if (!receivedInitialRoomStatus.current) {
+      receivedInitialRoomStatus.current = true;
+      void refreshRoomStatus();
+    }
     const timer = window.setInterval(() => void refreshRoomStatus(), 3_000);
     return () => window.clearInterval(timer);
   }, [joined, refreshRoomStatus]);

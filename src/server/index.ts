@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { Server } from "socket.io";
 import { resolve } from "node:path";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { z } from "zod";
 import type { ClientToServerEvents, CommandAck, PresenceEntry, RoomError, ServerToClientEvents } from "../shared/protocol.js";
 import { RoomCommandError, RoomStore } from "./room.js";
@@ -16,14 +16,19 @@ mkdirSync(dataDir, { recursive: true });
 
 const app = Fastify({ logger: true, trustProxy: true });
 const room = new RoomStore(resolve(dataDir, "primal.db"));
+let currentPin: string | null = null;
+let indexTemplate: string | undefined;
 // A process without connected listeners cannot carry an active temporary session.
 room.resetRoom();
-await app.register(fastifyStatic, { root: resolve(process.cwd(), "dist"), wildcard: false });
+await app.register(fastifyStatic, { root: resolve(process.cwd(), "dist"), wildcard: false, index: false });
 app.get("/api/health", async () => ({ ok: true, revision: room.snapshot().revision }));
 app.get("/api/status", async () => ({ active: currentPin !== null }));
 app.setNotFoundHandler((request, reply) => {
   if (request.raw.url?.startsWith("/api/")) return reply.code(404).send({ error: "Not found" });
-  return reply.sendFile("index.html");
+  const builtIndex = resolve(process.cwd(), "dist/index.html");
+  indexTemplate ??= readFileSync(existsSync(builtIndex) ? builtIndex : resolve(process.cwd(), "index.html"), "utf8");
+  const statusScript = `<script>window.__PRIMAL_ROOM_ACTIVE__=${currentPin !== null};</script>`;
+  return reply.header("Cache-Control", "no-store").type("text/html").send(indexTemplate.replace("</head>", `${statusScript}</head>`));
 });
 
 interface SocketData { displayName: string; isHost: boolean }
@@ -41,7 +46,6 @@ const positions = z.number().finite().nonnegative().max(86_400_000);
 const listeners = new Map<string, PresenceEntry>();
 let emptyRoomTimer: NodeJS.Timeout | undefined;
 let hostReservation: string | null = null;
-let currentPin: string | null = null;
 
 io.use((socket, next) => {
   const result = authSchema.safeParse(socket.handshake.auth);

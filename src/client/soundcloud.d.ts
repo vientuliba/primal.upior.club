@@ -16,5 +16,7 @@ interface SoundCloudWidgetFactory {
   Events: Record<"READY" | "PLAY" | "PAUSE" | "SEEK" | "FINISH" | "ERROR", string>;
 }
 
-interface Window { SC?: { Widget: SoundCloudWidgetFactory } }
-
+interface Window {
+  SC?: { Widget: SoundCloudWidgetFactory };
+  __PRIMAL_ROOM_ACTIVE__?: boolean;
+}
