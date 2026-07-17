@@ -259,7 +259,7 @@ function Room(props: RoomProps) {
 
         <div className="official-widget">
           {widgetUrl && <iframe className={current ? "" : "widget-hidden"} key={props.iframeKey} ref={widget.iframeRef} title="Official SoundCloud player" allow="autoplay" scrolling="no" src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(widgetUrl)}&show_user=true&show_artwork=false&show_comments=false&auto_play=false&color=%23ff5a1f`} />}
-          {!current && <div className="widget-empty">The official SoundCloud player will appear here.</div>}
+          {!current && <div className="widget-empty">The SoundCloud player will appear here.</div>}
         </div>
 
         <div className="transport">
@@ -294,7 +294,7 @@ function Room(props: RoomProps) {
         </section>
       </aside>
     </div>
-    <footer>Playback powered by the official SoundCloud widget. Volume is local to this device.</footer>
+    <footer>Playback powered by the SoundCloud widget. Volume is local to this device.</footer>
   </main>;
 }
 
